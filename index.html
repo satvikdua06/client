@@ -1,91 +1,4 @@
-// Search Deezer API
-        async function searchDeezer(query) {
-            const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=10&output=jsonp&callback=`);
-            const text = await response.text();
-            const jsonText = text.replace(/^.*?\(/, '').replace(/\);?\s*$/, '');
-            const data = JSON.parse(jsonText);
-            
-            return data.data.map(item => ({
-                id: `deezer_${item.id}`,
-                title: item.title,
-                artist: item.artist.name,
-                album: item.album.title,
-                duration: item.duration,
-                preview_url: item.preview,
-                artwork: item.album.cover_medium,
-                source: 'Deezer'
-            }));
-        }
-
-        // Search JioSaavn API
-        async function searchJioSaavn(query) {
-            try {
-                // Using JioSaavn's unofficial API
-                const response = await fetch(`https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${encodeURIComponent(query)}`);
-                const data = await response.json();
-                
-                let results = [];
-                
-                // If we get song results, fetch detailed info
-                if (data.songs && data.songs.data) {
-                    const songResults = await Promise.all(
-                        data.songs.data.slice(0, 5).map(async (song) => {
-                            try {
-                                const detailResponse = await fetch(`https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0&_format=json&pids=${song.id}`);
-                                const detailData = await detailResponse.json();
-                                
-                                if (detailData && detailData[song.id]) {
-                                    const track = detailData[song.id];
-                                    return {
-                                        id: `jiosaavn_${track.id}`,
-                                        title: track.song,
-                                        artist: track.primary_artists,
-                                        album: track.album,
-                                        duration: parseInt(track.duration),
-                                        preview_url: track.media_preview_url || track.media_url,
-                                        artwork: track.image ? track.image.replace('150x150', '300x300') : null,
-                                        source: 'JioSaavn'
-                                    };
-                                }
-                            } catch (e) {
-                                console.warn('Error fetching JioSaavn song details:', e);
-                                return null;
-                            }
-                        })
-                    );
-                    
-                    results = results.concat(songResults.filter(Boolean));
-                }
-                
-                return results;
-                
-            } catch (error) {
-                console.warn('JioSaavn search error:', error);
-                // Fallback to mock JioSaavn data
-                return [
-                    {
-                        id: `jiosaavn_mock_${Date.now()}`,
-                        title: `${query} - Bollywood Hit`,
-                        artist: 'Popular Artist',
-                        album: 'Latest Album',
-                        duration: 215,
-                        preview_url: 'https://www.soundjay.com/misc/sounds/bell-rinking-05.wav',
-                        artwork: 'https://via.placeholder.com/300x300/ff6b6b/ffffff?text=🎵',
-                        source: 'JioSaavn'
-                    },
-                    {
-                        id: `jiosaavn_mock2_${Date.now()}`,
-                        title: `${query} - Regional Hit`,
-                        artist: 'Regional Star',
-                        album: 'Folk Collection',
-                        duration: 195,
-                        preview_url: 'https://www.soundjay.com/misc/sounds/beep-07a.wav',
-                        artwork: 'https://via.placeholder.com/300x300/48dbfb/ffffff?text=🎶',
-                        source: 'JioSaavn'
-                    }
-                ];
-            }
-        }<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -806,15 +719,7 @@
                     console.warn('Deezer API failed:', e);
                 }
                 
-                // 3. Try JioSaavn API
-                try {
-                    const jiosaavnResults = await searchJioSaavn(query);
-                    results = results.concat(jiosaavnResults);
-                } catch (e) {
-                    console.warn('JioSaavn API failed:', e);
-                }
-
-                // 4. Try AudioMack API (mock)
+                // 3. Try AudioMack API (mock)
                 try {
                     const mockResults = await searchMockAPI(query);
                     results = results.concat(mockResults);
@@ -847,74 +752,23 @@
             })).filter(item => item.preview_url);
         }
 
-        // Search JioSaavn API
-        async function searchJioSaavn(query) {
-            try {
-                // Using JioSaavn's unofficial API
-                const response = await fetch(`https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${encodeURIComponent(query)}`);
-                const data = await response.json();
-                
-                let results = [];
-                
-                // If we get song results, fetch detailed info
-                if (data.songs && data.songs.data) {
-                    const songResults = await Promise.all(
-                        data.songs.data.slice(0, 5).map(async (song) => {
-                            try {
-                                const detailResponse = await fetch(`https://www.jiosaavn.com/api.php?__call=song.getDetails&cc=in&_marker=0&_format=json&pids=${song.id}`);
-                                const detailData = await detailResponse.json();
-                                
-                                if (detailData && detailData[song.id]) {
-                                    const track = detailData[song.id];
-                                    return {
-                                        id: `jiosaavn_${track.id}`,
-                                        title: track.song,
-                                        artist: track.primary_artists,
-                                        album: track.album,
-                                        duration: parseInt(track.duration),
-                                        preview_url: track.media_preview_url || track.media_url,
-                                        artwork: track.image ? track.image.replace('150x150', '300x300') : null,
-                                        source: 'JioSaavn'
-                                    };
-                                }
-                            } catch (e) {
-                                console.warn('Error fetching JioSaavn song details:', e);
-                                return null;
-                            }
-                        })
-                    );
-                    
-                    results = results.concat(songResults.filter(Boolean));
-                }
-                
-                return results;
-                
-            } catch (error) {
-                console.warn('JioSaavn search error:', error);
-                // Fallback to mock JioSaavn data
-                return [
-                    {
-                        id: `jiosaavn_mock_${Date.now()}`,
-                        title: `${query} - Bollywood Hit`,
-                        artist: 'Popular Artist',
-                        album: 'Latest Album',
-                        duration: 215,
-                        preview_url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-                        artwork: 'https://via.placeholder.com/300x300/ff6b6b/ffffff?text=🎵',
-                        source: 'JioSaavn'
-                    },
-                    {
-                        id: `jiosaavn_mock2_${Date.now()}`,
-                        title: `${query} - Regional Hit`,
-                        artist: 'Regional Star',
-                        album: 'Folk Collection',
-                        duration: 195,
-                        preview_url: 'https://www.soundjay.com/misc/sounds/beep-07a.wav',
-                        artwork: 'https://via.placeholder.com/300x300/48dbfb/ffffff?text=🎶',
-                        source: 'JioSaavn'
-                    }
-                ];
-            }
+        // Search Deezer API
+        async function searchDeezer(query) {
+            const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=10&output=jsonp&callback=`);
+            const text = await response.text();
+            const jsonText = text.replace(/^.*?\(/, '').replace(/\);?\s*$/, '');
+            const data = JSON.parse(jsonText);
+            
+            return data.data.map(item => ({
+                id: `deezer_${item.id}`,
+                title: item.title,
+                artist: item.artist.name,
+                album: item.album.title,
+                duration: item.duration,
+                preview_url: item.preview,
+                artwork: item.album.cover_medium,
+                source: 'Deezer'
+            }));
         }
 
         // Mock API for demonstration
@@ -1304,7 +1158,6 @@
 
         // Demo functionality - add some sample search results on load
         setTimeout(() => {
-            // Demo functionality - add some sample search results including JioSaavn
             const sampleResults = [
                 {
                     id: 'demo_1',
@@ -1325,33 +1178,13 @@
                     preview_url: 'https://www.soundjay.com/misc/sounds/beep-07a.wav',
                     artwork: 'https://via.placeholder.com/100x100/ff9ff3/ffffff?text=🌅',
                     source: 'Free Music'
-                },
-                {
-                    id: 'jiosaavn_demo',
-                    title: 'Tum Hi Ho',
-                    artist: 'Arijit Singh',
-                    album: 'Aashiqui 2',
-                    duration: 262,
-                    preview_url: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav',
-                    artwork: 'https://via.placeholder.com/100x100/ff6b6b/ffffff?text=🎵',
-                    source: 'JioSaavn'
-                },
-                {
-                    id: 'jiosaavn_demo2',
-                    title: 'Raabta',
-                    artist: 'Arijit Singh',
-                    album: 'Agent Vinod',
-                    duration: 245,
-                    preview_url: 'https://www.soundjay.com/misc/sounds/beep-07a.wav',
-                    artwork: 'https://via.placeholder.com/100x100/48dbfb/ffffff?text=🎶',
-                    source: 'JioSaavn'
                 }
             ];
             
             // Show sample results when page loads (for demo)
             document.getElementById('searchResults').innerHTML = `
                 <div style="text-align: center; margin-bottom: 15px; opacity: 0.8;">
-                    <small>🎵 Featured tracks from multiple sources (demo):</small>
+                    <small>🎵 Featured tracks (demo):</small>
                 </div>
             `;
             displaySearchResults(sampleResults);
