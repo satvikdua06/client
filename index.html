@@ -5,56 +5,90 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🎵 Sync Music Player (YouTube + JioSaavn)</title>
 <style>
-    body { font-family: sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; margin:0; padding:0; display:grid; grid-template-rows:auto 1fr; }
-    .connection-status { padding:10px; text-align:center; font-weight:bold; }
-    .connected { background: #38ef7d; color: black; }
-    .disconnected { background: #ff6b6b; color: black; }
-    .container { display:grid; grid-template-columns: 2fr 1fr; gap:15px; padding:15px; }
-    .card { background: rgba(255, 255, 255, 0.1); padding:20px; border-radius:15px; margin-bottom:15px; }
-    input[type="text"] { padding:12px; border-radius:8px; border:none; flex:1; }
-    button { padding:12px 20px; border:none; border-radius:8px; background: linear-gradient(45deg, #ff6b6b, #feca57); color:white; font-weight:bold; cursor:pointer; }
-    button:hover { opacity:0.9; }
-    .user-item { display:flex; align-items:center; gap:10px; margin-bottom:5px; }
-    .header h1 { margin:0; }
-    .player-section { display:grid; grid-template-columns: 3fr 1fr; gap:15px; }
-    .controls { display:flex; gap:10px; margin-top:10px; justify-content:center; }
-    .chat-messages { max-height:200px; overflow-y:auto; background: rgba(255,255,255,0.05); padding:10px; border-radius:10px; }
-    .chat-input { display:flex; gap:10px; margin-top:10px; }
+/* --- Mobile-first --- */
+body {
+    font-family: sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin: 0; padding: 0;
+}
+.connection-status {
+    padding: 10px; text-align: center; font-weight: bold;
+}
+.connected { background: #38ef7d; color: black; }
+.disconnected { background: #ff6b6b; color: black; }
+
+.container {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    gap: 15px;
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 15px;
+}
+
+input[type="text"] {
+    padding: 12px; border-radius: 8px; border: none; flex: 1;
+    font-size: 16px;
+}
+
+button {
+    padding: 12px; border: none; border-radius: 8px;
+    background: linear-gradient(45deg,#ff6b6b,#feca57);
+    color:white; font-weight:bold; font-size:16px; cursor:pointer;
+}
+button:hover { opacity:0.9; }
+
+.user-item { display:flex; align-items:center; gap:10px; margin-bottom:5px; font-size:14px; }
+.controls { display:flex; gap:10px; margin-top:10px; justify-content:center; flex-wrap: wrap; }
+.chat-messages { max-height:200px; overflow-y:auto; background: rgba(255,255,255,0.05); padding:10px; border-radius:10px; }
+.chat-input { display:flex; gap:10px; margin-top:10px; flex-wrap: wrap; }
+
+header h1 { margin:0; font-size:22px; }
+header p { margin:2px 0 0 0; font-size:14px; }
+
+/* --- Responsive Desktop (optional) --- */
+@media(min-width:768px){
+    .container { flex-direction: row; }
+    .player-section { flex: 2; }
+    .sidebar { flex: 1; }
+}
 </style>
 </head>
 <body>
 <div class="connection-status disconnected" id="connectionStatus">🔴 Disconnected</div>
 
 <div class="container">
-    <!-- Main Player Section -->
-    <div class="player-section" style="grid-column:1 / span 1;">
-        <div class="header card">
+
+    <!-- Player & Room Setup -->
+    <div class="player-section">
+        <div class="card header">
             <h1>🎵 Sync Music Player</h1>
-            <p>Listen to music together, perfectly in sync! (YouTube + JioSaavn)</p>
+            <p>Listen together, perfectly in sync! (YouTube + JioSaavn)</p>
         </div>
 
-        <!-- Room Setup -->
         <div class="card room-setup" id="roomSetup">
-            <h2>🚪 Join or Create a Room</h2>
-            <div style="display:flex; gap:10px;">
+            <h2>🚪 Join/Create a Room</h2>
+            <div style="display:flex; flex-direction:column; gap:10px;">
                 <input type="text" id="usernameInput" placeholder="Your name" maxlength="20">
                 <input type="text" id="roomIdInput" placeholder="Room ID (leave empty to create new)" maxlength="20">
                 <button onclick="joinRoom()">Join Room</button>
             </div>
-            <div class="status" id="setupStatus">Enter your name and room ID to get started! 🎶</div>
+            <div class="status" id="setupStatus">Enter your name and room ID 🎶</div>
         </div>
 
-        <!-- Player -->
-        <div class="card" id="playerSection" style="display:none;">
-            <div id="currentSong"><h3>🎵 No song selected</h3></div>
+        <div id="playerSection" style="display:none;">
+            <div class="card" id="currentSong"><h3>🎵 No song selected</h3></div>
 
-            <!-- YouTube -->
             <div class="card">
                 <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL here...">
                 <button onclick="loadVideo()">🎬 Load YouTube</button>
             </div>
 
-            <!-- JioSaavn -->
             <div class="card">
                 <input type="text" id="saavnSearch" placeholder="Search songs on JioSaavn...">
                 <button onclick="searchSaavn()">🔍 Search</button>
@@ -64,10 +98,8 @@
                 <div id="resultsList" style="max-height:200px; overflow-y:auto;"></div>
             </div>
 
-            <!-- Player Container -->
             <div class="card" id="playerContainer" style="text-align:center;">🎬 Player will appear here</div>
 
-            <!-- Controls -->
             <div class="controls">
                 <button onclick="playPause()" id="playPauseBtn">▶️ Play</button>
                 <button onclick="syncRequest()">🔄 Sync</button>
@@ -98,42 +130,48 @@
             </div>
         </div>
     </div>
+
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 <script>
-const SERVER_URL = window.location.hostname==='localhost'?'http://localhost:3001':'https://server-lmx9.onrender.com/';
-let player = null, isPlayerReady = false, socket, currentRoomId=null, username=null, isUpdatingFromRemote=false, userList=[], currentType=null, hostId=null;
+const SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://server-lmx9.onrender.com/';
+let player=null, isPlayerReady=false, socket, currentRoomId=null, username=null, isUpdatingFromRemote=false, userList=[], currentType=null;
 
-// Init
-window.addEventListener('load', () => { loadYouTubeAPI(); initSocket(); });
+window.addEventListener('load',()=>{ loadYouTubeAPI(); initSocket(); });
 
-function loadYouTubeAPI() { if(window.YT) return; let tag=document.createElement('script'); tag.src='https://www.youtube.com/iframe_api'; document.body.appendChild(tag);}
+function loadYouTubeAPI(){ if(window.YT) return; const tag=document.createElement('script'); tag.src='https://www.youtube.com/iframe_api'; document.body.appendChild(tag);}
 function onYouTubeIframeAPIReady(){ console.log("✅ YouTube API ready"); }
 
 // --- SOCKET.IO ---
 function initSocket(){
     socket=io(SERVER_URL,{transports:['websocket','polling']});
-
     socket.on('connect',()=>updateConnectionStatus(true));
     socket.on('disconnect',()=>updateConnectionStatus(false));
 
     socket.on('room-state',(state)=>{
+        document.getElementById('currentRoomId').textContent = state.roomId;
+        document.getElementById('hostName').textContent = state.hostId===socket.id ? username : "Someone else";
         if(state.currentVideo) loadMedia(state.currentVideo);
-        document.getElementById('currentRoomId').textContent=state.roomId;
-        hostId=state.hostId;
-        updateHostDisplay();
     });
 
-    socket.on('video-change', videoData => loadMedia(videoData));
+    socket.on('video-change', (videoData)=>{ loadMedia(videoData); });
+    socket.on('sync-response', (syncData)=>{ adjustPlayback(syncData); });
+    socket.on('heartbeat',(data)=>{ if(!isUpdatingFromRemote) adjustPlayback(data); });
 
-    socket.on('sync-response', data => adjustPlayback(data));
+    socket.on('user-list',(users)=>{
+        userList=users; updateUsersList();
+        document.getElementById('userCount').textContent=`${users.length} user${users.length!==1?'s':''} online`;
+        const host = users.find(u=>u.id===getRoomHostId());
+        document.getElementById('hostName').textContent = host ? host.username : "-";
+    });
 
-    socket.on('heartbeat', data => { if(!isUpdatingFromRemote) adjustPlayback(data); });
+    socket.on('chat-message',(data)=>addChatMessage(data.username,data.message));
+}
 
-    socket.on('user-list', users => { userList=users; updateUsersList(); document.getElementById('userCount').textContent=`${users.length} user${users.length!==1?'s':''} online`; });
-
-    socket.on('chat-message', data => addChatMessage(data.username,data.message));
+function getRoomHostId(){
+    const room = userList.find(u=>u.isHost);
+    return room ? room.id : null;
 }
 
 // --- ROOM ---
@@ -141,25 +179,29 @@ function joinRoom(){
     const uname=document.getElementById('usernameInput').value.trim();
     if(!uname){ updateSetupStatus("❌ Enter your name"); return; }
     username=uname;
-    currentRoomId=document.getElementById('roomIdInput').value.trim() || Math.random().toString(36).substr(2,6).toUpperCase();
-    socket.emit('join-room', currentRoomId, username);
+    currentRoomId=document.getElementById('roomIdInput').value.trim()||Math.random().toString(36).substr(2,6).toUpperCase();
+    socket.emit('join-room',currentRoomId,username);
     document.getElementById('roomSetup').style.display='none';
     document.getElementById('playerSection').style.display='block';
     updateStatus(`✅ Joined room: ${currentRoomId}`);
 }
 
-// --- YouTube ---
-function extractVideoId(url){ const regex=/(?:youtube\.com.*[?&]v=|youtu\.be\/)([^"&?\/\s]{11})/; const match=url.match(regex); return match?match[1]:null; }
-function loadVideo(){ 
-    const url=document.getElementById('youtubeUrl').value.trim(); 
-    const vid=extractVideoId(url); 
+// --- YOUTUBE ---
+function extractVideoId(url){
+    const regex=/(?:youtube\.com.*[?&]v=|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match=url.match(regex);
+    return match?match[1]:null;
+}
+function loadVideo(){
+    const url=document.getElementById('youtubeUrl').value.trim();
+    const vid=extractVideoId(url);
     if(!vid) return updateStatus("❌ Invalid YouTube URL");
     const videoData={videoId:vid,title:"YouTube Video",url:url,type:"youtube"};
-    socket.emit('video-change', videoData);
+    socket.emit('video-change',videoData);
     loadMedia(videoData);
 }
 
-// --- Saavn ---
+// --- SAAVN ---
 async function searchSaavn(){
     const q=document.getElementById('saavnSearch').value.trim();
     if(!q) return updateStatus("❌ Enter a song name.");
@@ -187,10 +229,12 @@ function loadMedia(videoData){
     currentType=videoData.type;
     if(videoData.type==="youtube"){
         document.getElementById('playerContainer').innerHTML=`<div id="ytplayer"></div>`;
-        player=new YT.Player('ytplayer',{videoId:videoData.videoId, events:{'onReady':()=>{isPlayerReady=true},'onStateChange':onYTState}});
+        player=new YT.Player('ytplayer',{videoId:videoData.videoId, events:{'onReady':()=>{isPlayerReady=true}, 'onStateChange':onYTState}});
     } else {
-        document.getElementById('playerContainer').innerHTML=`<audio id="saavnPlayer" controls autoplay style="width:100%;"><source src="${videoData.videoId}" type="audio/mpeg"></audio>`;
-        player=document.getElementById("saavnPlayer"); player.play(); isPlayerReady=true;
+        document.getElementById('playerContainer').innerHTML=`<audio id="saavnPlayer" controls autoplay style="width:100%;">
+            <source src="${videoData.videoId}" type="audio/mpeg"></audio>`;
+        player=document.getElementById("saavnPlayer");
+        player.play(); isPlayerReady=true;
     }
     updateCurrentSong(videoData.title);
     updateStatus(`🎵 Now playing: ${videoData.title}`);
@@ -199,19 +243,20 @@ function loadMedia(videoData){
 // --- SYNC ---
 function onYTState(e){
     if(isUpdatingFromRemote) return;
-    if(e.data===YT.PlayerState.PLAYING || e.data===YT.PlayerState.PAUSED){
+    if(e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.PAUSED){
         const data={isPlaying:e.data===YT.PlayerState.PLAYING,currentTime:player.getCurrentTime(),type:"youtube"};
         socket.emit('sync-response',data);
     }
 }
 function playPause(){
-    if(!player || !isPlayerReady) return;
-    if(currentType==="youtube"){ const st=player.getPlayerState(); st===1?player.pauseVideo():player.playVideo(); }
-    else{ player.paused?player.play():player.pause(); socket.emit('sync-response',{isPlaying:!player.paused,currentTime:player.currentTime,type:"saavn"}); }
+    if(!player||!isPlayerReady) return;
+    if(currentType==="youtube"){
+        const st=player.getPlayerState(); st===1?player.pauseVideo():player.playVideo();
+    } else { player.paused?player.play():player.pause(); socket.emit('sync-response',{isPlaying:!player.paused,currentTime:player.currentTime,type:"saavn"}); }
 }
 function syncRequest(){ socket.emit('sync-request'); }
 function adjustPlayback(syncData){
-    if(!player || !isPlayerReady) return;
+    if(!player||!isPlayerReady) return;
     isUpdatingFromRemote=true;
     if(syncData.type==="youtube" && player.seekTo){
         const diff=Math.abs(player.getCurrentTime()-syncData.currentTime);
@@ -224,35 +269,22 @@ function adjustPlayback(syncData){
     }
     setTimeout(()=>{isUpdatingFromRemote=false},200);
 }
-
 // heartbeat every 5s
 setInterval(()=>{
-    if(!player || !isPlayerReady) return;
+    if(!player||!isPlayerReady) return;
     let data=null;
-    if(currentType==="youtube" && player.getPlayerState){ data={isPlaying:player.getPlayerState()===1,currentTime:player.getCurrentTime(),type:"youtube"}; }
-    else if(currentType==="saavn"){ data={isPlaying:!player.paused,currentTime:player.currentTime,type:"saavn"}; }
+    if(currentType==="youtube"&&player.getPlayerState){ data={isPlaying:player.getPlayerState()===1,currentTime:player.getCurrentTime(),type:"youtube"};}
+    else if(currentType==="saavn"){ data={isPlaying:!player.paused,currentTime:player.currentTime,type:"saavn"};}
     if(data) socket.emit('heartbeat',data);
 },5000);
 
 // --- UI helpers ---
-function updateConnectionStatus(ok){ const el=document.getElementById('connectionStatus'); el.textContent=ok?'🟢 Connected':'🔴 Disconnected'; el.className=ok?'connection-status connected':'connection-status disconnected'; }
+function updateConnectionStatus(ok){ const el=document.getElementById('connectionStatus'); el.textContent=ok?'🟢 Connected':'🔴 Disconnected'; el.className= ok?'connection-status connected':'connection-status disconnected'; }
 function updateStatus(msg){ document.getElementById('playerStatus').textContent=msg; console.log(msg); }
 function updateSetupStatus(msg){ document.getElementById('setupStatus').textContent=msg; }
 function updateCurrentSong(t){ document.getElementById('currentSong').innerHTML=`<h3>🎵 Now Playing</h3><p>${t}</p>`; }
-function updateUsersList(){ 
-    const c=document.getElementById('usersList'); c.innerHTML=""; 
-    userList.forEach(u=>{
-        const d=document.createElement("div"); d.className="user-item"; 
-        d.innerHTML=`<span>👤 ${u.username}${u.id===hostId?' 👑':''}</span>`; 
-        c.appendChild(d);
-    }); 
-    updateHostDisplay();
-}
-function updateHostDisplay(){
-    const host = userList.find(u=>u.id===hostId);
-    document.getElementById('hostName').textContent=host?host.username:'-';
-}
-function sendMessage(){ const inp=document.getElementById('chatInput'); const msg=inp.value.trim(); if(!msg) return; socket.emit('chat-message',msg); inp.value=""; }
+function updateUsersList(){ const c=document.getElementById('usersList'); c.innerHTML=""; userList.forEach(u=>{const d=document.createElement("div"); d.className="user-item"; d.innerHTML=`<span>👤 ${u.username}${u.id===getRoomHostId()?' (Host)':''}</span>`; c.appendChild(d); }); }
+function sendMessage(){ const inp=document.getElementById('chatInput'); const msg=inp.value.trim(); if(!msg)return; socket.emit('chat-message',msg); inp.value=""; }
 function addChatMessage(u,m){ const c=document.getElementById('chatMessages'); const d=document.createElement("div"); d.className="chat-message"; d.innerHTML=`<b>${u}:</b> ${m}`; c.appendChild(d); c.scrollTop=c.scrollHeight; }
 </script>
 </body>
