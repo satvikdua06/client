@@ -630,13 +630,13 @@ async function searchSaavn() {
         return;
     }
     
-    updateStatus("🔍 Searching JioSaavn...");
+    updateStatus("🔍 Searching...");
     
     try {
-        // Using a CORS proxy to bypass API restrictions
-        const targetUrl = `https://jiosaavn-api-private.vercel.app/search/songs?query=${q}`;
-        const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+        // Calling our own server, which will then call the Saavn API. This avoids all CORS issues.
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`); // This line is changed
 
+        // The rest of the function remains the same!
         const data = await res.json();
         const list = document.getElementById('resultsList');
         list.innerHTML = "";
@@ -670,11 +670,10 @@ async function searchSaavn() {
         
         updateStatus("✅ Search results loaded!");
     } catch (error) {
-        updateStatus("❌ Search failed. The API might be down. Please try again later.");
+        updateStatus("❌ Search failed. Please try again later.");
         console.error('Search error:', error);
     }
 }
-
 function playSaavn(url, title) {
     const videoData = {
         videoId: url,
