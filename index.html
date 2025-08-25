@@ -633,7 +633,8 @@ async function searchSaavn() {
     updateStatus("🔍 Searching JioSaavn...");
     
     try {
-        const res = await fetch(`https://saavn.dev/api/search/songs?query=${encodeURIComponent(q)}`);
+        // This is the updated, working API endpoint
+        const res = await fetch(`https://jiosaavn-api-private.vercel.app/search/songs?query=${encodeURIComponent(q)}`);
         const data = await res.json();
         const list = document.getElementById('resultsList');
         list.innerHTML = "";
@@ -647,11 +648,16 @@ async function searchSaavn() {
         data.data.results.forEach(song => {
             const div = document.createElement("div");
             div.className = "search-result";
-            const imageUrl = song.image[1]?.link || song.image[0]?.link;
-            const downloadUrl = song.downloadUrl[song.downloadUrl.length - 1]?.link;
-            if (!downloadUrl) return; // Skip songs without a download link
+            // Use high-quality image link (150x150)
+            const imageUrl = song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
+            // Use high-quality download link
+            const downloadUrl = song.downloadUrl[4]?.link || song.downloadUrl[3]?.link;
+            
+            if (!downloadUrl) return; // Skip songs that can't be played
 
-            const title = `${song.name.replace(/'/g, "\\'")} - ${song.primaryArtists.replace(/'/g, "\\'")}`;
+            // Sanitize single and double quotes for the onclick function
+            const title = `${song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')} - ${song.primaryArtists.replace(/'/g, "\\'").replace(/"/g, '&quot;')}`;
+            
             div.innerHTML = `
                 <img src="${imageUrl}" width="50" height="50" alt="${song.name}">
                 <div style="flex:1;">
@@ -665,7 +671,7 @@ async function searchSaavn() {
         
         updateStatus("✅ Search results loaded!");
     } catch (error) {
-        updateStatus("❌ Search failed. Please try again.");
+        updateStatus("❌ Search failed. The API might be down. Please try again later.");
         console.error('Search error:', error);
     }
 }
