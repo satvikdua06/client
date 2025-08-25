@@ -633,10 +633,8 @@ async function searchSaavn() {
     updateStatus("🔍 Searching...");
     
     try {
-        // Calling our own server, which will then call the Saavn API. This avoids all CORS issues.
-        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`); // This line is changed
-
-        // The rest of the function remains the same!
+        // Calling our own server, which will then call the new Saavn API
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         const list = document.getElementById('resultsList');
         list.innerHTML = "";
@@ -650,18 +648,22 @@ async function searchSaavn() {
         data.data.results.forEach(song => {
             const div = document.createElement("div");
             div.className = "search-result";
-            const imageUrl = song.image[2]?.link || song.image[1]?.link || song.image[0]?.link;
-            const downloadUrl = song.downloadUrl[4]?.link || song.downloadUrl[3]?.link;
             
-            if (!downloadUrl) return;
+            // The new API provides image and download links in a different format
+            const imageUrl = song.image.find(img => img.quality === '150x150')?.url;
+            const downloadUrl = song.downloadUrl.find(link => link.quality === '320kbps')?.url;
+            
+            if (!downloadUrl || !imageUrl) return; // Skip songs that can't be played
 
-            const title = `${song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')} - ${song.primaryArtists.replace(/'/g, "\\'").replace(/"/g, '&quot;')}`;
-            
+            // Sanitize single and double quotes for the onclick function
+            const title = `${song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;')} - ${song.artists.primary.map(a => a.name).join(', ').replace(/'/g, "\\'").replace(/"/g, '&quot;')}`;
+            const primaryArtists = song.artists.primary.map(a => a.name).join(', ');
+
             div.innerHTML = `
                 <img src="${imageUrl}" width="50" height="50" alt="${song.name}">
                 <div style="flex:1;">
                     <div style="font-weight:bold;">${song.name}</div>
-                    <div style="opacity:0.8; font-size:14px;">${song.primaryArtists}</div>
+                    <div style="opacity:0.8; font-size:14px;">${primaryArtists}</div>
                 </div>
                 <button onclick="playSaavn('${downloadUrl}', '${title}')" class="primary-btn">▶️ Play</button>
             `;
@@ -674,6 +676,7 @@ async function searchSaavn() {
         console.error('Search error:', error);
     }
 }
+    
 function playSaavn(url, title) {
     const videoData = {
         videoId: url,
