@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -374,7 +374,6 @@ header p {
 <div class="connection-status disconnected" id="connectionStatus">🔴 Connecting...</div>
 
 <div class="container">
-    <!-- Player & Room Setup -->
     <div class="player-section">
         <div class="card header">
             <h1>🎵 Sync Music Player</h1>
@@ -433,7 +432,6 @@ header p {
         </div>
     </div>
 
-    <!-- Sidebar -->
     <div class="sidebar">
         <div class="card room-info">
             <h3>🏠 Room Info</h3>
@@ -458,10 +456,12 @@ header p {
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
 <script>
-const SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://server-lmx9.onrender.com/';
+// --- CONFIGURATION ---
+const SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://your-render-app-name.onrender.com'; // IMPORTANT: Change this to your Render app URL
 let player = null, isPlayerReady = false, socket, currentRoomId = null, username = null, 
     isUpdatingFromRemote = false, userList = [], currentType = null, lastControlTime = 0;
 
+// --- INITIALIZATION ---
 window.addEventListener('load', () => {
     loadYouTubeAPI();
     initSocket();
@@ -496,10 +496,9 @@ function initSocket() {
 
     socket.on('room-state', (state) => {
         document.getElementById('currentRoomId').textContent = state.roomId;
-        const hostUser = userList.find(u => u.id === state.hostId);
-        document.getElementById('hostName').textContent = hostUser ? hostUser.username : "Unknown";
         if (state.currentVideo) {
             loadMedia(state.currentVideo);
+            setTimeout(() => adjustPlayback(state), 1000); // Wait for player to init
         }
     });
 
@@ -511,7 +510,7 @@ function initSocket() {
     });
 
     socket.on('play-pause', (data) => {
-        if (!isUpdatingFromRemote && data.controllerId !== socket.id) {
+        if (data.controllerId !== socket.id) {
             adjustPlayback(data);
             if (data.controlledBy) {
                 showNotification(`${data.isPlaying ? '▶️' : '⏸️'} ${data.controlledBy} ${data.isPlaying ? 'played' : 'paused'} the music`);
@@ -520,7 +519,7 @@ function initSocket() {
     });
 
     socket.on('seek', (data) => {
-        if (!isUpdatingFromRemote && data.controllerId !== socket.id) {
+        if (data.controllerId !== socket.id) {
             adjustPlayback(data);
             if (data.controlledBy) {
                 showNotification(`⏩ ${data.controlledBy} seeked the video`);
@@ -530,16 +529,17 @@ function initSocket() {
 
     socket.on('sync-response', (syncData) => {
         adjustPlayback(syncData);
+        showNotification('🔄 Sync complete!');
     });
 
     socket.on('heartbeat', (data) => {
-        if (!isUpdatingFromRemote && data.fromId !== socket.id) {
+        if (data.fromId !== socket.id) {
             adjustPlayback(data);
         }
     });
 
     socket.on('state-update', (data) => {
-        if (!isUpdatingFromRemote && data.fromId !== socket.id) {
+        if (data.fromId !== socket.id) {
             adjustPlayback(data);
         }
     });
@@ -547,16 +547,8 @@ function initSocket() {
     socket.on('user-list', (users) => {
         userList = users;
         updateUsersList();
-        document.getElementById('userCount').textContent = `${users.length} user${users.length !== 1 ? 's' : ''} online`;
-        
-        // Show activity indicator
-        const indicator = document.getElementById('activityIndicator');
-        indicator.style.display = users.length > 1 ? 'inline-block' : 'none';
-        
-        const hostUser = users.find(u => u.id === getHostId());
-        if (hostUser) {
-            document.getElementById('hostName').textContent = hostUser.username;
-        }
+        const hostUser = userList.find(u => u.id === getHostIdFromServer(users));
+        document.getElementById('hostName').textContent = hostUser ? hostUser.username : "N/A";
     });
 
     socket.on('user-joined', (data) => {
@@ -579,9 +571,8 @@ function initSocket() {
     });
 }
 
-function getHostId() {
-    // In the updated system, host is mainly for room management
-    return userList.length > 0 ? userList[0].id : null;
+function getHostIdFromServer(users) {
+    return users.length > 0 ? users[0].id : null;
 }
 
 // --- ROOM ---
@@ -594,7 +585,7 @@ function joinRoom() {
     
     username = uname;
     currentRoomId = document.getElementById('roomIdInput').value.trim() || 
-                   Math.random().toString(36).substr(2, 6).toUpperCase();
+                    Math.random().toString(36).substr(2, 6).toUpperCase();
     
     socket.emit('join-room', currentRoomId, username);
     document.getElementById('roomSetup').style.display = 'none';
@@ -647,7 +638,7 @@ async function searchSaavn() {
         list.innerHTML = "";
         document.getElementById('saavnResults').style.display = "block";
         
-        if (!data.data.results.length) {
+        if (!data.data || !data.data.results.length) {
             list.innerHTML = "<p style='text-align:center; opacity:0.7; padding:20px;'>No results found. Try different keywords! 🔍</p>";
             return;
         }
@@ -655,13 +646,18 @@ async function searchSaavn() {
         data.data.results.forEach(song => {
             const div = document.createElement("div");
             div.className = "search-result";
+            const imageUrl = song.image[1]?.link || song.image[0]?.link;
+            const downloadUrl = song.downloadUrl[song.downloadUrl.length - 1]?.link;
+            if (!downloadUrl) return; // Skip songs without a download link
+
+            const title = `${song.name.replace(/'/g, "\\'")} - ${song.primaryArtists.replace(/'/g, "\\'")}`;
             div.innerHTML = `
-                <img src="${song.image[1].link}" width="50" height="50">
+                <img src="${imageUrl}" width="50" height="50" alt="${song.name}">
                 <div style="flex:1;">
                     <div style="font-weight:bold;">${song.name}</div>
                     <div style="opacity:0.8; font-size:14px;">${song.primaryArtists}</div>
                 </div>
-                <button onclick="playSaavn('${song.downloadUrl[song.downloadUrl.length-1].link}','${song.name.replace(/'/g, "\\'")} - ${song.primaryArtists.replace(/'/g, "\\'")}')" class="primary-btn">▶️ Play</button>
+                <button onclick="playSaavn('${downloadUrl}', '${title}')" class="primary-btn">▶️ Play</button>
             `;
             list.appendChild(div);
         });
@@ -687,10 +683,15 @@ function playSaavn(url, title) {
     document.getElementById('saavnResults').style.display = 'none';
 }
 
-// --- LOAD MEDIA ---
+// --- MEDIA PLAYER ---
 function loadMedia(videoData) {
     currentType = videoData.type;
+    isPlayerReady = false;
     
+    if (player && typeof player.destroy === 'function') {
+        player.destroy();
+    }
+
     if (videoData.type === "youtube") {
         document.getElementById('playerContainer').innerHTML = `<div id="ytplayer"></div>`;
         
@@ -699,56 +700,32 @@ function loadMedia(videoData) {
                 videoId: videoData.videoId,
                 width: '100%',
                 height: '315',
-                playerVars: {
-                    'playsinline': 1,
-                    'rel': 0,
-                    'showinfo': 0
-                },
+                playerVars: { 'playsinline': 1, 'rel': 0, 'showinfo': 0, 'autoplay': 1 },
                 events: {
-                    'onReady': () => {
-                        isPlayerReady = true;
-                        console.log("YouTube player ready");
-                    },
+                    'onReady': () => { isPlayerReady = true; console.log("YouTube player ready"); },
                     'onStateChange': onYTState
                 }
             });
         }
-    } else {
+    } else { // saavn
         document.getElementById('playerContainer').innerHTML = `
-            <audio id="saavnPlayer" controls style="width:100%; max-width:400px;">
+            <audio id="saavnPlayer" controls style="width:100%; max-width:400px;" autoplay>
                 <source src="${videoData.videoId}" type="audio/mpeg">
             </audio>
         `;
         
         player = document.getElementById("saavnPlayer");
-        player.addEventListener('loadeddata', () => {
-            isPlayerReady = true;
-        });
-        
-        player.addEventListener('play', () => {
-            if (!isUpdatingFromRemote) {
-                emitStateUpdate(true, player.currentTime);
-            }
-        });
-        
-        player.addEventListener('pause', () => {
-            if (!isUpdatingFromRemote) {
-                emitStateUpdate(false, player.currentTime);
-            }
-        });
-        
-        player.addEventListener('seeked', () => {
-            if (!isUpdatingFromRemote) {
-                emitStateUpdate(!player.paused, player.currentTime);
-            }
-        });
+        player.addEventListener('loadeddata', () => { isPlayerReady = true; });
+        player.addEventListener('play', () => { if (!isUpdatingFromRemote) emitStateUpdate(true, player.currentTime); });
+        player.addEventListener('pause', () => { if (!isUpdatingFromRemote) emitStateUpdate(false, player.currentTime); });
+        player.addEventListener('seeked', () => { if (!isUpdatingFromRemote) emitStateUpdate(!player.paused, player.currentTime); });
     }
     
     updateCurrentSong(videoData.title);
     updateStatus(`🎵 Now playing: ${videoData.title}`);
 }
 
-// --- SYNC FUNCTIONS ---
+// --- SYNC & CONTROLS ---
 function onYTState(e) {
     if (isUpdatingFromRemote) return;
     
@@ -761,17 +738,12 @@ function onYTState(e) {
 
 function emitStateUpdate(isPlaying, currentTime) {
     const now = Date.now();
-    if (now - lastControlTime < 200) return; // Throttle to prevent spam
+    if (now - lastControlTime < 300) return; // Throttle
     
     lastControlTime = now;
     
-    const data = {
-        isPlaying: isPlaying,
-        currentTime: currentTime,
-        type: currentType
-    };
-    
-    socket.emit('play-pause', data);
+    const data = { isPlaying, currentTime, type: currentType };
+    socket.emit('state-update', data);
 }
 
 function playPause() {
@@ -782,17 +754,9 @@ function playPause() {
     
     if (currentType === "youtube") {
         const state = player.getPlayerState();
-        if (state === 1) { // Playing
-            player.pauseVideo();
-        } else {
-            player.playVideo();
-        }
+        state === 1 ? player.pauseVideo() : player.playVideo();
     } else {
-        if (player.paused) {
-            player.play();
-        } else {
-            player.pause();
-        }
+        player.paused ? player.play() : player.pause();
     }
 }
 
@@ -802,126 +766,56 @@ function syncRequest() {
 }
 
 function adjustPlayback(syncData) {
-    if (!player || !isPlayerReady) return;
+    if (!player || !isPlayerReady || !syncData) return;
     
     isUpdatingFromRemote = true;
     
     try {
-        if (syncData.type === "youtube" && player.seekTo) {
-            const currentTime = player.getCurrentTime();
+        if (currentType === "youtube" && player.seekTo) {
+            const currentTime = player.getCurrentTime() || 0;
             const targetTime = syncData.currentTime;
-            const diff = Math.abs(currentTime - targetTime);
             
-            if (diff > 1) {
+            if (Math.abs(currentTime - targetTime) > 1.5) {
                 player.seekTo(targetTime, true);
             }
             
-            if (syncData.isPlaying) {
+            if (syncData.isPlaying && player.getPlayerState() !== 1) {
                 player.playVideo();
-                document.getElementById('playPauseBtn').textContent = "⏸️ Pause";
-            } else {
+            } else if (!syncData.isPlaying && player.getPlayerState() === 1) {
                 player.pauseVideo();
-                document.getElementById('playPauseBtn').textContent = "▶️ Play";
             }
-        } else if (syncData.type === "saavn") {
+        } else if (currentType === "saavn" && player.currentTime !== undefined) {
             const currentTime = player.currentTime;
             const targetTime = syncData.currentTime;
-            const diff = Math.abs(currentTime - targetTime);
-            
-            if (diff > 1) {
+
+            if (Math.abs(currentTime - targetTime) > 1.5) {
                 player.currentTime = targetTime;
             }
             
             if (syncData.isPlaying && player.paused) {
-                player.play();
-                document.getElementById('playPauseBtn').textContent = "⏸️ Pause";
+                player.play().catch(e => console.error("Play interrupted:", e));
             } else if (!syncData.isPlaying && !player.paused) {
                 player.pause();
-                document.getElementById('playPauseBtn').textContent = "▶️ Play";
             }
         }
-    } catch (error) {
-        console.error('Sync error:', error);
+    } catch (e) {
+        console.error("Error adjusting playback:", e);
     }
     
-    setTimeout(() => {
-        isUpdatingFromRemote = false;
-    }, 500);
+    // Update button state
+    document.getElementById('playPauseBtn').textContent = syncData.isPlaying ? "⏸️ Pause" : "▶️ Play";
+
+    setTimeout(() => { isUpdatingFromRemote = false; }, 500);
 }
 
-// Heartbeat for smooth sync (reduced frequency)
-setInterval(() => {
-    if (!player || !isPlayerReady || isUpdatingFromRemote) return;
-    
-    let data = null;
-    
-    if (currentType === "youtube" && player.getPlayerState) {
-        const state = player.getPlayerState();
-        data = {
-            isPlaying: state === 1,
-            currentTime: player.getCurrentTime(),
-            type: "youtube"
-        };
-    } else if (currentType === "saavn") {
-        data = {
-            isPlaying: !player.paused,
-            currentTime: player.currentTime,
-            type: "saavn"
-        };
-    }
-    
-    if (data) {
-        socket.emit('heartbeat', data);
-    }
-}, 3000); // Reduced to 3 seconds for better performance
-
-// --- UI HELPER FUNCTIONS ---
-function updateConnectionStatus(connected) {
-    const el = document.getElementById('connectionStatus');
-    el.textContent = connected ? '🟢 Connected & Synced' : '🔴 Disconnected';
-    el.className = connected ? 'connection-status connected' : 'connection-status disconnected';
-}
-
-function updateStatus(msg) {
-    document.getElementById('playerStatus').textContent = msg;
-    console.log(msg);
-}
-
-function updateSetupStatus(msg) {
-    document.getElementById('setupStatus').textContent = msg;
-}
-
-function updateCurrentSong(title) {
-    document.getElementById('currentSong').innerHTML = `
-        <h3>🎵 Now Playing</h3>
-        <p>${title}</p>
-        <small style="opacity:0.8;">Anyone can control the playback</small>
-    `;
-}
-
-function updateUsersList() {
-    const container = document.getElementById('usersList');
-    container.innerHTML = "";
-    
-    userList.forEach(user => {
-        const div = document.createElement("div");
-        div.className = "user-item";
-        div.innerHTML = `
-            <span style="font-size:18px;">👤</span>
-            <span style="flex:1;">${user.username}</span>
-            ${user.id === socket.id ? '<span style="opacity:0.7;">You</span>' : ''}
-        `;
-        container.appendChild(div);
-    });
-}
-
+// --- CHAT ---
 function sendMessage() {
     const input = document.getElementById('chatInput');
-    const msg = input.value.trim();
-    if (!msg) return;
-    
-    socket.emit('chat-message', msg);
-    input.value = "";
+    const message = input.value.trim();
+    if (message) {
+        socket.emit('chat-message', message);
+        input.value = '';
+    }
 }
 
 function handleChatKeyPress(event) {
@@ -930,47 +824,55 @@ function handleChatKeyPress(event) {
     }
 }
 
-function addChatMessage(username, message, isOwn = false) {
-    const container = document.getElementById('chatMessages');
-    
-    // Clear welcome message if it exists
-    if (container.children.length === 1 && container.children[0].style.textAlign === 'center') {
-        container.innerHTML = '';
-    }
-    
-    const div = document.createElement("div");
-    div.className = "chat-message";
-    div.style.background = isOwn ? 'rgba(102, 126, 234, 0.2)' : 'transparent';
-    div.innerHTML = `
-        <strong style="color: ${isOwn ? '#4ecdc4' : '#ff6b6b'};">${username}${isOwn ? ' (You)' : ''}:</strong>
-        <span style="margin-left: 8px;">${message}</span>
-    `;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-    
-    // Keep only last 50 messages for performance
-    while (container.children.length > 50) {
-        container.removeChild(container.firstChild);
-    }
+// --- UI HELPERS ---
+function updateConnectionStatus(isConnected) {
+    const statusDiv = document.getElementById('connectionStatus');
+    statusDiv.textContent = isConnected ? '🟢 Connected' : '🔴 Disconnected';
+    statusDiv.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
+}
+
+function updateStatus(message) {
+    document.getElementById('playerStatus').innerHTML = message;
+}
+
+function updateSetupStatus(message) {
+    document.getElementById('setupStatus').innerHTML = message;
+}
+
+function updateCurrentSong(title) {
+    document.getElementById('currentSong').innerHTML = `<h3>🎵 Now Playing</h3><p>${title || 'N/A'}</p>`;
+}
+
+function updateUsersList() {
+    const listDiv = document.getElementById('usersList');
+    listDiv.innerHTML = '';
+    userList.forEach((user, index) => {
+        const userDiv = document.createElement('div');
+        userDiv.className = 'user-item';
+        userDiv.innerHTML = `<span>${index === 0 ? '👑' : '👤'}</span> <span>${user.username} ${user.id === socket.id ? '(You)' : ''}</span>`;
+        listDiv.appendChild(userDiv);
+    });
+    document.getElementById('userCount').textContent = `${userList.length} user${userList.length !== 1 ? 's' : ''} online`;
+    document.getElementById('activityIndicator').style.display = userList.length > 1 ? 'inline-block' : 'none';
+}
+
+function addChatMessage(user, message, isMe) {
+    const messagesDiv = document.getElementById('chatMessages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'chat-message';
+    msgDiv.style.textAlign = isMe ? 'right' : 'left';
+    msgDiv.innerHTML = `<strong>${isMe ? 'You' : user}:</strong> ${message}`;
+    messagesDiv.appendChild(msgDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 function showNotification(message) {
-    // Remove existing notification
-    const existing = document.querySelector('.floating-notification');
-    if (existing) {
-        existing.remove();
-    }
-    
     const notification = document.createElement('div');
     notification.className = 'floating-notification';
     notification.textContent = message;
     document.body.appendChild(notification);
-    
-    // Auto remove after 5 seconds
     setTimeout(() => {
-        if (notification.parentNode) {
-            notification.remove();
-        }
+        notification.remove();
     }, 5000);
 }
 </script>
